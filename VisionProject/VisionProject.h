@@ -11,6 +11,7 @@
 #include"Balser_Cam.h"
 #include<thread>
 #include<atomic>   //新增：原子计数
+#include<condition_variable>   //新增：没有帧时让工作线程睡，来帧再唤醒
 #include<chrono>
 #include<map>
 #include<queue>
@@ -55,6 +56,8 @@ public:
     //新增：socket的三个回调，注册给SocketClient用
     //新增：把图像交给主线程去显示（子线程不能直接碰 UI）
     static void postShowImage(VisionProject* p, cv::Mat img, int cam);
+    //新增：把一帧放进该路相机的队列（队列容量1，新帧覆盖旧帧 = 主动丢帧）
+    void pushFrame(int cam, cv::Mat img);
 
     static void connectServerCallbackFunc(void* p);   //连接成功后：发账号密码
     static void recvCallbackFunc(void* p, char msg[]);//收到服务器数据：解析
@@ -101,6 +104,7 @@ private:
     std::atomic<int> m_nSnapThreads{ 0 };//新增：还有几个采集线程在跑
     std::atomic<bool> m_bDispFinish{ false };//新增：原子退出标志，true退出
     std::mutex m_mtxDisp;//共享变量互斥锁，因为我map是一个共享变量有写有读
+    std::condition_variable m_cvDisp;//新增：队列有数据/要退出时唤醒工作线程
     bool m_bStartSnapCrap;//开始连续采集的标志，true开始连续采集，false停止
   
 

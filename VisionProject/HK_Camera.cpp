@@ -151,9 +151,7 @@ bool HK_Camera::sanpcap()
 	if (!m_bcamopen) {
 		return false;
 	}
-	//新增：进循环前先把停止标志清掉。否则之前 stopSnap() 留下的 true 会让这一路
-	//      一进循环就立刻退出（表现出来就是"只有第1路没画面"）
-	m_bstopSnap = false;
+
 	if (m_boffLine) {
 		while (!m_bstopSnap) {//用循环一直采集图片入队列
 			char filename[512];
@@ -173,10 +171,11 @@ bool HK_Camera::sanpcap()
 			m_nImgIndex++;
 			if (m_nImgIndex > 7) m_nImgIndex = 1;
 			m_callback_pushImg(m_imgData, m_pmainWin);//回调函数，像队列里面存图片用的
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));//新增：离线模拟时每帧停一下（节流从回调搬到这里）
+			//节流 200ms，但拆成 20ms 一步：停止时最多等 20ms 就能退出（join 不会卡 UI）
+			for (int k = 0; k < 10 && !m_bstopSnap; k++) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(20));
+			}
 		}
-		m_bstopSnap = false;//退出循环之后停止采集，但是标志位会一直是停止采集，
-		//所以我初始化一下标志位继续采集，这样下次再摁连续采集的话化还是停止采集
 	}
 	else {//新增：在线连续采集，一直取帧然后回调入队
 		if (handle == nullptr) {

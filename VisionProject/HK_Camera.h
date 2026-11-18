@@ -39,6 +39,14 @@ public:
      * 返回值：是否停止成功
      */
     virtual bool stopCap() {
+        return stopCapture();   //新增：统一走 stopCapture
+    }
+    //新增：连续采集的启停由相机自己管，调用方不直接碰 m_bstopSnap
+    bool startCapture() {
+        m_bstopSnap = false;    //开始前清标志，避免上一次停止留下的 true
+        return true;
+    }
+    bool stopCapture() {
         m_bstopSnap = true;
         return true;
     }

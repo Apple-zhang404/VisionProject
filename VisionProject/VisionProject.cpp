@@ -162,6 +162,7 @@ VisionProject::~VisionProject()
     //新增：退出顺序很重要——先让每个线程"知道该退了"，再 join 等它真的退出
     //1) 显示线程
     m_bDispFinish = true;
+    m_cvDisp.notify_all();   //新增：叫醒还在等帧的线程，让它看到退出标志
     if (tDisp != nullptr && tDisp->joinable()) {
         tDisp->join();
     }
@@ -229,6 +230,7 @@ void VisionProject::on_actSnapGrap()
         phk_cam[index]->setOffLineFlags(m_chk_Off->isChecked());
         phk_cam[index]->setOffLineGrapImgPath(m_lineEdit->text().toLocal8Bit().toStdString());//把路径设置给相机
 
+        phk_cam[index]->startCapture();//新增：由相机清停止标志，调用方不直接改
         m_bStartSnapCrap = true;
         if (m_actSnapGrap) m_actSnapGrap->setEnabled(false);//新增：开始采集后按钮置灰
 
@@ -310,9 +312,7 @@ void VisionProject::on_actGetFrame() {
         }
         phk_cam[i]->setOffLineGrapImgPath(m_lineEdit->text().toLocal8Bit().toStdString());
         if (phk_cam[i]->getFrame()) {//单帧采集成功
-            m_mtxDisp.lock();
-            m_mapImageData[i].push(phk_cam[i]->getImageData());//采集成功的图片入队
-            m_mtxDisp.unlock();
+            pushFrame(i, phk_cam[i]->getImageData());//采集成功的图片入队（容量1，自动丢旧帧）
             LOG_INFO(QString("相机%1 单帧采集成功").arg(i + 1));
         }
         else {
@@ -326,40 +326,53 @@ void VisionProject::on_actGetFrame() {
 
 }
 
+//新增：工作线程——从队列取帧、识别条码、把图交给主线程显示
+//  要点：
+//  1) 用条件变量等待，没有帧就睡，不空转烧CPU
+//  2) 4 路队列轮流看，每路单独去重
+//  3) 队列容量只有1（见 pushFrame），所以永远不会积压
 void VisionProject::displayThdFunc(void* para)
 {
-    VisionProject* pmainWin = (VisionProject*)para;
+    VisionProject* p = (VisionProject*)para;
+    static std::string s_lastBarcode[4];   //每路各自记上次识别结果，避免刷屏
 
-    //同一条码每帧都会识别出来，只有内容变了才写日志，否则刷屏
-    static std::string s_lastBarcode;
-
-    while (1) {
-        if (pmainWin->m_bDispFinish) {
-            return;
-        }
-
-        int index = pmainWin->m_cmb->currentIndex();//只处理当前选中的那一路
-
+    while (true) {
+        int cam = -1;
         cv::Mat img;
         {
-            std::lock_guard<std::mutex> lk(pmainWin->m_mtxDisp);
-            std::queue<cv::Mat>& q = pmainWin->m_mapImageData[index];
-            if (q.empty()) {
-                img = cv::Mat();
+            std::unique_lock<std::mutex> lk(p->m_mtxDisp);
+            //等到"有帧"或"要退出"，最多等100ms（超时只是兜底，正常靠notify唤醒）
+            p->m_cvDisp.wait_for(lk, std::chrono::milliseconds(100), [p]() {
+                if (p->m_bDispFinish) {
+                    return true;
+                }
+                for (int i = 0; i < 4; i++) {
+                    if (!p->m_mapImageData[i].empty()) {
+                        return true;
+                    }
+                }
+                return false;
+                });
+
+            if (p->m_bDispFinish) {
+                return;
             }
-            else {
-                img = q.front();
-                q.pop();
+            for (int i = 0; i < 4; i++) {//取第一个有帧的相机
+                if (!p->m_mapImageData[i].empty()) {
+                    cam = i;
+                    img = p->m_mapImageData[i].front();
+                    p->m_mapImageData[i].pop();
+                    break;
+                }
             }
         }
-        if (img.empty()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        if (cam < 0 || img.empty()) {
             continue;
         }
 
-        //一维码识别
+        //识别（在工作线程做，不占用主线程）
         try {
-            BarCodeResData ret = pmainWin->m_imgProcess.barCodeIdentify(img);
+            BarCodeResData ret = p->m_imgProcess.barCodeIdentify(img);
             if (ret.hv_DecodedDataStrings.Length() > 0) {
                 QString strCodes;
                 for (int k = 0; k < ret.hv_DecodedDataStrings.Length(); k++) {
@@ -367,19 +380,37 @@ void VisionProject::displayThdFunc(void* para)
                     strCodes += QString::fromLocal8Bit(hsCode.Text()) + " ";
                 }
                 strCodes = strCodes.trimmed();
-                if (s_lastBarcode != strCodes.toStdString()) {
-                    s_lastBarcode = strCodes.toStdString();
-                    LOG_INFO(QString("相机%1 条码: %2").arg(index + 1).arg(strCodes));
+                if (s_lastBarcode[cam] != strCodes.toStdString()) {
+                    s_lastBarcode[cam] = strCodes.toStdString();
+                    LOG_INFO(QString("相机%1 条码: %2").arg(cam + 1).arg(strCodes));
                 }
             }
         }
         catch (HalconCpp::HException& e) {
-            std::cout << "条码识别异常: " << e.ErrorMessage().Text() << std::endl;
+            LOG_ERROR(QString("相机%1 条码识别异常: %2")
+                .arg(cam + 1).arg(QString::fromLocal8Bit(e.ErrorMessage().Text())));
         }
 
-        //显示到对应label（同样是投递到主线程，不在显示线程里直接碰UI）
-        postShowImage(pmainWin, img, index);
+        //显示：投递到主线程（这里在子线程，不能直接setPixmap）
+        postShowImage(p, img, cam);
     }
+}
+
+//新增：把一帧放进队列。容量只有1：新帧直接覆盖旧帧，保证不会积压
+void VisionProject::pushFrame(int cam, cv::Mat img)
+{
+    if (cam < 0 || cam >= 4 || img.empty()) {
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lk(m_mtxDisp);
+        std::queue<cv::Mat>& q = m_mapImageData[cam];
+        while (!q.empty()) {
+            q.pop();   //丢掉还没处理的旧帧（主动丢帧）
+        }
+        q.push(img);
+    }
+    m_cvDisp.notify_one();   //叫醒工作线程
 }
 //新增：把图像投递到主线程显示。子线程（采集/显示线程）不能直接 setPixmap，
 //      否则就是"跨线程操作UI"，轻则闪烁重则崩溃
@@ -403,25 +434,25 @@ void VisionProject::postShowImage(VisionProject* p, cv::Mat img, int cam) {
         }, Qt::QueuedConnection);
 }
 
-//采集回调：本线程只负责"把图交出去"，真正的显示在主线程做
+//采集回调：把帧交给队列（pushFrame 里带队列容量控制 + 唤醒工作线程）
 void VisionProject::grapImageCallbackFunc1(cv::Mat img, void* para)
 {
-    postShowImage((VisionProject*)para, img, 0);
+    ((VisionProject*)para)->pushFrame(0, img);
 }
 
 void VisionProject::grapImageCallbackFunc2(cv::Mat img, void* para)
 {
-    postShowImage((VisionProject*)para, img, 1);
+    ((VisionProject*)para)->pushFrame(1, img);
 }
 
 void VisionProject::grapImageCallbackFunc3(cv::Mat img, void* para)
 {
-    postShowImage((VisionProject*)para, img, 2);
+    ((VisionProject*)para)->pushFrame(2, img);
 }
 
 void VisionProject::grapImageCallbackFunc4(cv::Mat img, void* para)
 {
-    postShowImage((VisionProject*)para, img, 3);
+    ((VisionProject*)para)->pushFrame(3, img);
 }
 
 void VisionProject::on_pbtn_imageTool_clicked()
