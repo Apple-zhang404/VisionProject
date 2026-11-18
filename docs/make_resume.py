@@ -7,7 +7,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历_v2.docx"
+OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历_v3.docx"
 
 NAVY = "1F3864"
 GRAY = (0x59, 0x59, 0x59)
@@ -197,11 +197,11 @@ font(p.add_run("代码仓库："), 9, True, GRAY)
 font(p.add_run("github.com/Apple-zhang404/VisionProject"), 9, False, (0x2E, 0x5C, 0x9A))
 font(p.add_run("（私有仓库，可通过邀请查看）"), 9, False, GRAY)
 for b in [
-    "面向四路工业相机的桌面视觉软件，独立完成采集、算法、界面、网络上报到发布打包的完整链路。",
-    "采集层：抽象 Camera 基类 + 工厂/单例（DeviceManager）管理四路设备，屏蔽海康 MVS SDK 与离线图片序列两种数据源，切换只改一个模式开关。",
-    "显示层：有界队列（容量 1）+ 条件变量解耦采集与显示，新帧覆盖旧帧实现主动丢帧，显示延迟恒定在一帧内、内存恒定，避免 30fps 采集把主线程打满。",
-    "线程安全：UI 更新统一经 QMetaObject::invokeMethod（QueuedConnection）投递回主线程，消除子线程操作控件导致的偶发崩溃；四个工作线程用原子标志 + join 回收，关闭窗口耗时由 5.2s 降至 0.4s。",
-    "算法与工程化：封装 HALCON 形状模板匹配与一维码识别（参数 XML 持久化、识别失败自动旋转 90/180/270 重试）；自研线程安全日志模块（单例 + 互斥锁 + 按天写文件）；用 windeployqt 打包，可在无开发环境的机器运行。",
+    "面向四路工业相机的桌面视觉软件，独立完成采集、算法、界面、通信到发布打包的完整链路。",
+    "采集层：抽象 Camera 接口 + 工厂/单例（DeviceManager）统一管理四路设备，同一套调用既走海康 MVS 实采、也走离线图片序列，改一个模式开关即可切换；实采链路为「枚举→建句柄→按 GigE 最优包大小开流→取帧→转 OpenCV BGR」，句柄与设备对象由管理器统一释放。",
+    "显示层：容量 1 的有界队列 + 条件变量解耦采集与显示，新帧覆盖旧帧实现主动丢帧——队列恒为 1、内存不随时长增长、延迟上限一帧；消费端用谓词等待防虚假唤醒，取帧后立即释放锁，识别与绘制都在锁外执行。",
+    "视觉算法：基于 HALCON 实现形状模板匹配与一维码识别。模板侧 ROI 交互框选后，按金字塔层数、角度起止/步长、对比度与 MinScore 建模板并匹配，参数持久化到 XML、重启即生效；条码侧可配码制、最小模块宽度、扫描线数，竖贴条码失败时自动旋转 90/180/270 重试（HALCON 的 RotateImage 保持原尺寸会裁边，改用 OpenCV 旋转后再转 HObject）。",
+    "线程与工程化：UI 更新统一经 QMetaObject::invokeMethod（QueuedConnection）回主线程，四线程以原子标志 + join 回收，关闭窗口由 5.2s 降至 0.4s；自研线程安全日志；windeployqt 打包，可在无开发环境机器运行。",
 ]:
     bullet(b)
 
