@@ -34,8 +34,7 @@ VisionProject::VisionProject(QWidget *parent)
     m_socket.registerHeartCallbackFunc(keepAliveCallbackFunc);      //心跳
     m_thdRecv = new std::thread(SocketClient::recvData, &m_socket);
     m_thdHeart = new std::thread(SocketClient::keepAlive, &m_socket);
-    m_thdRecv->detach();
-    m_thdHeart->detach();
+    //不再 detach：析构时先 stop() 再 join，线程才能干净退出
     //下一步再加这两个线程：
     
     //实例化4个相机并注册到设备管理对象中
@@ -145,11 +144,35 @@ VisionProject::VisionProject(QWidget *parent)
 
     //这个显示线程队列里有图像我就显示（单帧采集的图从这里显示）
     tDisp = new std::thread(displayThdFunc,this);
-    tDisp->detach();
+    //不再 detach：析构时置退出标志再 join
 }
 
 VisionProject::~VisionProject()
-{}
+{
+    //新增：退出顺序很重要——先让每个线程"知道该退了"，再 join 等它真的退出
+    //1) 显示线程
+    m_bDispFinish = true;
+    if (tDisp != nullptr && tDisp->joinable()) {
+        tDisp->join();
+    }
+    //2) 采集线程（stopCap 会置相机的停止标志，循环里会退出）
+    for (int i = 0; i < 4; i++) {
+        phk_cam[i]->stopCap();
+    }
+    if (m_thdSnap != nullptr && m_thdSnap->joinable()) {
+        m_thdSnap->join();
+    }
+    //3) socket线程（只看标志不够，recv() 阻塞着，必须先 close socket）
+    m_socket.stop();
+    if (m_thdRecv != nullptr && m_thdRecv->joinable()) {
+        m_thdRecv->join();
+    }
+    if (m_thdHeart != nullptr && m_thdHeart->joinable()) {
+        m_thdHeart->join();
+    }
+    delete m_doc;
+    m_doc = nullptr;
+}
 
 void VisionProject::on_actOpenCam()
 {
@@ -199,8 +222,13 @@ void VisionProject::on_actSnapGrap()
         m_bStartSnapCrap = true;
         if (m_actSnapGrap) m_actSnapGrap->setEnabled(false);//新增：开始采集后按钮置灰
 
-        //新增：只给"当前选中的这一路"起采集线程
-        std::thread thSnap([this, index]() {
+        //新增：采集线程存成成员，不再 detach；退出时由析构/停止逻辑 join 回收
+        if (m_thdSnap != nullptr && m_thdSnap->joinable()) {//上一路的线程还没回收，先收掉
+            m_thdSnap->join();
+            delete m_thdSnap;
+            m_thdSnap = nullptr;
+        }
+        m_thdSnap = new std::thread([this, index]() {
             phk_cam[index]->sanpcap();
             //线程结束时回到主线程把按钮恢复
             QMetaObject::invokeMethod(this, [this]() {
@@ -208,7 +236,6 @@ void VisionProject::on_actSnapGrap()
                 if (m_actSnapGrap) m_actSnapGrap->setEnabled(true);
                 }, Qt::QueuedConnection);
             });
-        thSnap.detach();
     }
     else {
         QMessageBox::information(this, "信息", "请检查相机是否打开");
@@ -222,6 +249,12 @@ void VisionProject::on_actStopCaptrue()
         stopSnap();//新增：置标志位并通知相机停止采集
         m_bStartSnapCrap = false;
         if (m_actSnapGrap) m_actSnapGrap->setEnabled(true);//新增：停止后按钮恢复可点
+        //新增：等采集线程真正退出再回收，避免它还在跑就析构
+        if (m_thdSnap != nullptr && m_thdSnap->joinable()) {
+            m_thdSnap->join();
+            delete m_thdSnap;
+            m_thdSnap = nullptr;
+        }
         QMessageBox::information(this, "信息", "停止采集");
     }
     else {
@@ -286,10 +319,6 @@ void VisionProject::displayThdFunc(void* para)
 {
     VisionProject* pmainWin = (VisionProject*)para;
 
-    QLabel* labels[4] = {
-        pmainWin->ui.label, pmainWin->ui.label_2,
-        pmainWin->ui.label_3, pmainWin->ui.label_4
-    };
     //同一条码每帧都会识别出来，只有内容变了才写日志，否则刷屏
     static std::string s_lastBarcode;
 
@@ -340,7 +369,18 @@ void VisionProject::displayThdFunc(void* para)
             std::cout << "条码识别异常: " << e.ErrorMessage().Text() << std::endl;
         }
 
-        //显示到对应label
+        //显示到对应label（同样是投递到主线程，不在显示线程里直接碰UI）
+        postShowImage(pmainWin, img, index);
+    }
+}
+//新增：把图像投递到主线程显示。子线程（采集/显示线程）不能直接 setPixmap，
+//      否则就是"跨线程操作UI"，轻则闪烁重则崩溃
+void VisionProject::postShowImage(VisionProject* p, cv::Mat img, int cam) {
+    if (p == nullptr || img.empty() || cam < 0 || cam >= 4) {
+        return;
+    }
+    QMetaObject::invokeMethod(p, [p, img, cam]() {
+        QLabel* labels[4] = { p->ui.label, p->ui.label_2, p->ui.label_3, p->ui.label_4 };
         QImage qimg;
         if (img.channels() > 1) {
             cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
@@ -350,54 +390,30 @@ void VisionProject::displayThdFunc(void* para)
             qimg = QImage(img.data, img.cols, img.rows, img.step, QImage::Format_Grayscale8);
         }
         QPixmap pixmap = QPixmap::fromImage(qimg);
-        labels[index]->setPixmap(pixmap.scaled(labels[index]->size(),
+        labels[cam]->setPixmap(pixmap.scaled(labels[cam]->size(),
             Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    }
-}
-//采集回调：每个相机只负责把图显示到自己那一路的label上（老师原版就是这个做法）
-//注意：这里不入队，所以连续采集时显示线程不会做条码识别；条码识别只对"单帧采集"入队的图生效
-static void showMatOnLabel(cv::Mat img, QLabel* label) {
-    if (img.empty() || label == nullptr) {
-        return;
-    }
-    QImage qimg;
-    if (img.channels() > 1) {
-        cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
-        qimg = QImage(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
-    }
-    else {
-        qimg = QImage(img.data, img.cols, img.rows, img.step, QImage::Format_Grayscale8);
-    }
-    QPixmap pixmap = QPixmap::fromImage(qimg);
-    label->setPixmap(pixmap.scaled(label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }, Qt::QueuedConnection);
 }
 
+//采集回调：本线程只负责"把图交出去"，真正的显示在主线程做
 void VisionProject::grapImageCallbackFunc1(cv::Mat img, void* para)
 {
-    VisionProject* pmainWin = (VisionProject*)para;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));//每帧停一下，别刷太快
-    showMatOnLabel(img, pmainWin->ui.label);
+    postShowImage((VisionProject*)para, img, 0);
 }
 
 void VisionProject::grapImageCallbackFunc2(cv::Mat img, void* para)
 {
-    VisionProject* pmainWin = (VisionProject*)para;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    showMatOnLabel(img, pmainWin->ui.label_2);
+    postShowImage((VisionProject*)para, img, 1);
 }
 
 void VisionProject::grapImageCallbackFunc3(cv::Mat img, void* para)
 {
-    VisionProject* pmainWin = (VisionProject*)para;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    showMatOnLabel(img, pmainWin->ui.label_3);
+    postShowImage((VisionProject*)para, img, 2);
 }
 
 void VisionProject::grapImageCallbackFunc4(cv::Mat img, void* para)
 {
-    VisionProject* pmainWin = (VisionProject*)para;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    showMatOnLabel(img, pmainWin->ui.label_4);
+    postShowImage((VisionProject*)para, img, 3);
 }
 
 void VisionProject::on_pbtn_imageTool_clicked()

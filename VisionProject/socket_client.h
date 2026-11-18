@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include<WinSock2.h>
 #include<string>
+#include<atomic>   //新增：跨线程的退出标志要用原子类型
 #pragma comment(lib,"ws2_32.lib")
 
 //新增：三个回调类型（连接成功 / 收到数据 / 心跳）
@@ -39,6 +40,16 @@ public:
 	void setMainWinPtr(void* p) {
 		m_pmainwin = (VisionProject*)p;
 	}
+	//新增：停止两个线程。只看标志位不行——recv() 会一直阻塞着，
+	//      必须把 socket 关掉才能让它立刻返回
+	void stop() {
+		m_recvExitFlag = true;
+		m_heartExitFlag = true;
+		if (clientsocket != INVALID_SOCKET) {
+			closesocket(clientsocket);
+			clientsocket = INVALID_SOCKET;
+		}
+	}
 private:
 	int m_nport = 8888;
 	std::string m_ip;
@@ -48,6 +59,6 @@ private:
 	heart_callback heartCallBack = nullptr;
 	connect_callback connectCallBack = nullptr;
 	VisionProject* m_pmainwin = nullptr;
-	bool m_recvExitFlag = false;
-	bool m_heartExitFlag = false;
+	std::atomic<bool> m_recvExitFlag{ false };   //新增：原子，收数据线程用它退出
+	std::atomic<bool> m_heartExitFlag{ false };  //新增：原子，心跳线程用它退出
 };

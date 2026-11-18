@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstdio>
 #include <fstream>   //新增：用 ifstream 判断文件是否存在（避免引入 windows.h）
+#include <thread>    //新增：节流用
+#include <chrono>
 
 //新增：静态成员定义
 MV_CC_DEVICE_INFO_LIST HK_Camera::stDeviceList = { 0 };
@@ -171,6 +173,7 @@ bool HK_Camera::sanpcap()
 			m_nImgIndex++;
 			if (m_nImgIndex > 7) m_nImgIndex = 1;
 			m_callback_pushImg(m_imgData, m_pmainWin);//回调函数，像队列里面存图片用的
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));//新增：离线模拟时每帧停一下（节流从回调搬到这里）
 		}
 		m_bstopSnap = false;//退出循环之后停止采集，但是标志位会一直是停止采集，
 		//所以我初始化一下标志位继续采集，这样下次再摁连续采集的话化还是停止采集

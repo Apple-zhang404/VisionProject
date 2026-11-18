@@ -53,6 +53,9 @@ public:
     static cv::Mat Base2Mat(std::string& base64_data);         //Base64还原成Mat
 
     //新增：socket的三个回调，注册给SocketClient用
+    //新增：把图像交给主线程去显示（子线程不能直接碰 UI）
+    static void postShowImage(VisionProject* p, cv::Mat img, int cam);
+
     static void connectServerCallbackFunc(void* p);   //连接成功后：发账号密码
     static void recvCallbackFunc(void* p, char msg[]);//收到服务器数据：解析
     static void keepAliveCallbackFunc(void* p);       //心跳：每10秒发一次
@@ -91,11 +94,12 @@ private:
     std::thread* tDisp;//显示线程
     std::thread* m_thdRecv;//
     std::thread* m_thdHeart;//
+    std::thread* m_thdSnap = nullptr;   //新增：连续采集线程（不再 detach，退出时要 join）
     //新增：工具栏动作指针，连续采集时把按钮禁用掉，防止重复点开多个线程
     QAction* m_actSnapGrap = nullptr;
     QAction* m_actStopCaptrue = nullptr;
     std::atomic<int> m_nSnapThreads{ 0 };//新增：还有几个采集线程在跑
-    bool m_bDispFinish;//线程是否退出标注。true退出
+    std::atomic<bool> m_bDispFinish{ false };//新增：原子退出标志，true退出
     std::mutex m_mtxDisp;//共享变量互斥锁，因为我map是一个共享变量有写有读
     bool m_bStartSnapCrap;//开始连续采集的标志，true开始连续采集，false停止
   

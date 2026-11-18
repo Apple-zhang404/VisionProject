@@ -1,4 +1,4 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS   //新增：允许用 inet_addr（老师代码用的是它）
+﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS   //新增：允许用 inet_addr（老师代码用的是它）
 #include "socket_client.h"
 #include<iostream>
 #include<cstring>
@@ -90,18 +90,22 @@ void SocketClient::recvData(void* p)
 	}
 }
 
-//新增：心跳，每10秒发一次（将来放进线程里跑）
+//新增：心跳，每10秒发一次
+//注意：原来直接 Sleep(10000)，程序退出时 join 要等满10秒。
+//      改成每 200ms 醒一次看退出标志，退出就立刻返回
 void SocketClient::keepAlive(void* p)
 {
 	SocketClient* ptr = (SocketClient*)p;
-	while (true) {
+	while (!ptr->m_heartExitFlag) {
+		for (int i = 0; i < 50 && !ptr->m_heartExitFlag; i++) {//50 * 200ms = 10秒
+			Sleep(200);
+		}
 		if (ptr->m_heartExitFlag) {
-			std::cout << "keepAlive thread func exit" << std::endl;
 			break;
 		}
-		Sleep(10000);
 		if (ptr->heartCallBack != nullptr) {
 			ptr->heartCallBack(ptr->m_pmainwin);
 		}
 	}
+	std::cout << "keepAlive thread func exit" << std::endl;
 }
