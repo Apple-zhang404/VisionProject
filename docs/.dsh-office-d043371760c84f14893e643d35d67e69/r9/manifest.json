@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "backend": "native",
+  "rasterEngine": "libreoffice",
+  "source": "saved",
+  "inputPath": "C:\\Users\\SPG\\Documents\\简历\\张谦帅_简历_new.docx",
+  "sourceSha256": "5b55503a9df10337b5500edb1ecd14e921be69552f3b9504776a106fc6258afd",
+  "dpi": 144,
+  "pageCount": 2,
+  "images": [
+    {
+      "index": 1,
+      "page": 2,
+      "path": "C:\\Users\\SPG\\source\\repos\\VisionProject\\docs\\.dsh-office-d043371760c84f14893e643d35d67e69\\r9\\page-0001.png",
+      "width": 1191,
+      "height": 1684,
+      "rectangle": {
+        "x": 0,
+        "y": 0,
+        "width": 793.7333333333333,
+        "height": 1122.5333333333333
+      },
+      "byteLength": 223488
+    }
+  ],
+  "missingFonts": [
+    "Courier"
+  ]
+}

@@ -2,12 +2,12 @@
 """张谦帅 简历 —— 表头 + 信息表 + 照片位 + 深色模块条（一页版）"""
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_BREAK
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历.docx"
+OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历_new.docx"
 
 NAVY = "1F3864"
 GRAY = (0x59, 0x59, 0x59)
@@ -191,6 +191,10 @@ section("项 目 经 历")
 
 project_header("工业视觉检测上位机（Qt6 + HALCON + OpenCV）", "2026.09 – 至今")
 tech_line("C++17、Qt6、HALCON 17.12、OpenCV 4.8、海康 MVS SDK、Winsock2、JSON、XML、Git")
+p = p_new(after=1)
+font(p.add_run("代码仓库："), 9, True, GRAY)
+font(p.add_run("github.com/Apple-zhang404/VisionProject"), 9, False, (0x2E, 0x5C, 0x9A))
+font(p.add_run("（私有仓库，可通过邀请查看）"), 9, False, GRAY)
 for b in [
     "面向四路工业相机的桌面视觉软件，独立完成采集、算法、界面、网络上报到发布打包的完整链路。",
     "采集层：抽象 Camera 基类 + 工厂/单例（DeviceManager）管理四路设备，屏蔽海康 MVS SDK 与离线图片序列两种数据源，切换只改一个模式开关。",
@@ -221,6 +225,37 @@ font(p.add_run(
     "个人特质：沟通表达清晰，课程小组中负责需求拆分与接口对齐；抗压能力强，能扛住长周期调试（如多线程崩溃复现）；"
     "热爱篮球，长期参加院系比赛，团队协作意识与执行力较强。"
 ), 9.5)
+_brk = p.add_run()
+_brk.add_break(WD_BREAK.PAGE)
+
+
+# ==================== 第二页：项目展示 ====================
+
+p = p_new(before=0, after=2)
+shade_para(p, NAVY)
+p.paragraph_format.left_indent = Cm(0.15)
+font(p.add_run("  项 目 展 示 （ 离 线 模 拟 采 集 ）"), 12, True, (0xFF, 0xFF, 0xFF), spacing=20)
+
+p = p_new(before=2, after=6)
+font(p.add_run("说明：以下截图均为离线图片序列模拟四路相机采集，未连接真实工业相机；界面为 Qt6 + QSS 深色主题，算法为 HALCON 模板匹配与一维码识别。"), 9, False, GRAY)
+
+
+def figure(path, caption, width_cm):
+    doc.add_picture(path, width=Cm(width_cm))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cap = p_new(before=1, after=4)
+    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    font(cap.add_run(caption), 8.5, False, GRAY)
+
+
+figure(r"C:/Users/SPG/source/repos/VisionProject/docs/images/main-window.png",
+       "主界面：四路相机采集与显示（右侧为运行日志，带时间戳与级别）", 14.0)
+
+figure(r"C:/Users/SPG/source/repos/VisionProject/docs/images/imagetool.png",
+       "参数与算法窗口：形状模板匹配参数、ROI 交互、条码识别页", 9.5)
+
+figure(r"C:/Users/SPG/source/repos/VisionProject/docs/images/barcode-page.png",
+       "条码识别页：左侧图像显示，右侧参数配置与识别结果", 9.5)
 
 doc.save(OUT)
 print("saved:", OUT)
