@@ -5,6 +5,7 @@
 #include <QDir>
 #include"ImageTool.h"
 #include"json.hpp"                 //新增：JSON库（单头文件）
+#include"Logger.h"                 //新增：日志模块
 #include"Task.h"                   //新增：Base64编解码
 using json = nlohmann::json;       //新增：给个短名字
 
@@ -25,6 +26,7 @@ VisionProject::VisionProject(QWidget *parent)
         param.st_strCodeType = m_doc->GetNodeParam("codeType").c_str();
         m_imgProcess.readBarCodeModel(barcodeModel);
         m_imgProcess.setBarCodeParam(param);
+        LOG_INFO(QString("条码模型已加载: %1").arg(QString::fromLocal8Bit(barcodeModel.c_str())));
     }
     //新增：socket初始化（这一步只注册，不连服务器；线程下一步再加）
     m_socket.setMainWinPtr(this);
@@ -40,6 +42,7 @@ VisionProject::VisionProject(QWidget *parent)
     //实例化4个相机并注册到设备管理对象中
     //新增：先枚举一次相机，再给每一路建句柄（没有相机时跳过，离线模式照常能用）
     int nDevNum = HK_Camera::getEnumDevices();
+    LOG_INFO(QString("枚举到相机数量: %1").arg(nDevNum));
     for (int i = 0; i < 4; i++) {
         Camera* pcam = DeviceManager::getInstance().creatCamIns(HK_CAM);//实例化一个海康相机
         DeviceManager::getInstance().addDevice(pcam, i + 1);//键用i+1，也就是1~4号相机
@@ -49,6 +52,13 @@ VisionProject::VisionProject(QWidget *parent)
     }
 
     ui.setupUi(this);
+
+    //新增：日志接到界面右侧的日志框（信号跨线程排队，子线程写日志也安全）
+    connect(&Logger::instance(), &Logger::newLog, this,
+        [this](const QString& line) {
+            ui.plainTextEdit->appendPlainText(line);
+        }, Qt::QueuedConnection);
+    LOG_INFO("程序启动");
 
     //新增：界面布局调整——画面区占大头，日志区窄一些，窗口默认大一点
     resize(1280, 800);
@@ -303,10 +313,11 @@ void VisionProject::on_actGetFrame() {
             m_mtxDisp.lock();
             m_mapImageData[i].push(phk_cam[i]->getImageData());//采集成功的图片入队
             m_mtxDisp.unlock();
-            ui.plainTextEdit->appendPlainText("图像采集成功，才禹欣是猪");
+            LOG_INFO(QString("相机%1 单帧采集成功").arg(i + 1));
         }
         else {
-            ui.plainTextEdit->appendPlainText("图像采集失败，才禹欣是猪");
+            LOG_ERROR(QString("相机%1 单帧采集失败: %2").arg(i + 1)
+                .arg(QString::fromLocal8Bit(m_lineEdit->text().toLocal8Bit())));
         }
     }
     else {
@@ -358,10 +369,7 @@ void VisionProject::displayThdFunc(void* para)
                 strCodes = strCodes.trimmed();
                 if (s_lastBarcode != strCodes.toStdString()) {
                     s_lastBarcode = strCodes.toStdString();
-                    QString strLog = QString("相机%1 条码: %2").arg(index + 1).arg(strCodes);
-                    QMetaObject::invokeMethod(pmainWin, [pmainWin, strLog]() {
-                        pmainWin->ui.plainTextEdit->appendPlainText(strLog);
-                        }, Qt::QueuedConnection);
+                    LOG_INFO(QString("相机%1 条码: %2").arg(index + 1).arg(strCodes));
                 }
             }
         }
