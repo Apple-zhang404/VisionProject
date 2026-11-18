@@ -181,6 +181,9 @@ VisionProject::~VisionProject()
     if (m_thdHeart != nullptr && m_thdHeart->joinable()) {
         m_thdHeart->join();
     }
+    //4) 释放设备（相机对象）
+    DeviceManager::getInstance().relaseDev();
+
     delete m_doc;
     m_doc = nullptr;
 }

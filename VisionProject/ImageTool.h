@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include<QWidget>
 #include"ui_ImageTool.h"
 #include"DeviceManager.h"
@@ -46,6 +46,7 @@ private:
 	void updateListImage();                 //刷新缩略图
 	void displayImage(const QString& file);  //读一张图并显示到label上
 	void dispImageFit();                     //新增：按窗口比例把整幅图缩放到label里（保持长宽比，多余留黑边）
+	void appendLog(const QString& msg, bool isError = false);   //新增：统一日志入口
 	void loadDefaultShapeModel();            //新增：启动时自动加载exe目录下的模板
 protected:
 	void resizeEvent(QResizeEvent* e) override;   //新增：窗口变大变小时重新适配

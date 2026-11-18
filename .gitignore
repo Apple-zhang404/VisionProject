@@ -1,4 +1,4 @@
-# 编译产物
+﻿# 编译产物
 x64/
 Debug/
 Release/
@@ -19,3 +19,5 @@ Release/
 logs/
 Image_Mat.bmp
 received/
+
+dist/

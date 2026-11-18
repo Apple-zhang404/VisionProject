@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include "VisionProject.h"//为了拿到主窗口的XML配置对象
+#include "Logger.h"       //新增：统一日志
 
 ImageTool::ImageTool(QWidget* parent)
     : QWidget(parent)
@@ -53,7 +54,7 @@ void ImageTool::on_pbtn_getframe_clicked() {
         }
         catch (HalconCpp::HException& e) {
             //Halcon出错是抛异常，不接住的话程序会直接崩掉
-            std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+            appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
         }
     }
 }
@@ -122,7 +123,7 @@ void ImageTool::displayImage(const QString& file) {
         dispImageFit();//新增：按窗口比例显示整幅图（原来是1:1，大图会被裁掉）
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -196,7 +197,7 @@ void ImageTool::on_pbtn_ROIChoice_clicked() {
         std::cout << "ROI 选择完成" << std::endl;
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -230,17 +231,17 @@ void ImageTool::on_pbtn_createmodel_clicked() {
         QString savePath = QFileDialog::getSaveFileName(this, "保存模板",
             QDir::current().filePath("shapeModel1.mod"), "模板文件(*.mod)");
         if (savePath.isEmpty()) {
-            ui.plnTextEdit_result->appendPlainText("已创建模板，但没保存（取消了保存对话框）");
+            appendLog("已创建模板，但没保存（取消了保存对话框）");
             return;
         }
         QByteArray localSave = savePath.toLocal8Bit();
         WriteShapeModel(hv_shapeModel, localSave.constData());
         m_shapeModelPath = savePath;   //记下路径，下次打开自动加载
-        ui.plnTextEdit_result->appendPlainText("创建模板成功，已保存: " + savePath);
+        appendLog("创建模板成功，已保存: " + savePath);
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
-        ui.plnTextEdit_result->appendPlainText("创建模板失败");
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
+        appendLog("创建模板失败");
     }
 }
 
@@ -257,7 +258,7 @@ void ImageTool::on_pbtn_inspectshape_clicked() {
         DispObj(ho_shapeModelRegions, hv_window);//把模板边缘画出来
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -278,10 +279,10 @@ void ImageTool::on_pbtn_loadmodel_clicked() {
             return;
         }
         m_shapeModelPath = modelfile;
-        ui.plnTextEdit_result->appendPlainText("加载模板成功: " + modelfile);
+        appendLog("加载模板成功: " + modelfile);
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -317,7 +318,7 @@ void ImageTool::on_pbtn_matching_clicked() {
             &hv_row, &hv_column, &hv_angle, &hv_score);
 
         if (hv_score.Length() == 0) {
-            ui.plnTextEdit_result->appendPlainText("没有匹配到模板");
+            appendLog("没有匹配到模板");
             return;
         }
         //把每处匹配用矩形框出来
@@ -336,12 +337,12 @@ void ImageTool::on_pbtn_matching_clicked() {
                 .arg(hv_row[i].D())
                 .arg(hv_column[i].D())
                 .arg(hv_angle[i].D());
-            ui.plnTextEdit_result->appendPlainText(str);
+            appendLog(str);
         }
         std::cout << "匹配到 " << hv_score.Length() << " 个目标" << std::endl;
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -552,7 +553,7 @@ void ImageTool::on_pbtn_createbarcode_clicked() {
         std::cout << "条码模型创建成功，已保存 barCodeModel.bar" << std::endl;
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -636,7 +637,7 @@ void ImageTool::on_pbtn_findbarcode_clicked() {
         ui.plnTextEdit_barcode->setPlainText(strResult);
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
         ui.plnTextEdit_barcode->setPlainText(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())));
     }
 }
@@ -661,7 +662,7 @@ void ImageTool::on_pbtn_LoadBarCodeMod_clicked() {
         std::cout << "条码模型加载成功: " << modefile.toStdString() << std::endl;
     }
     catch (HalconCpp::HException& e) {
-        std::cout << "HALCON错误: " << e.ErrorMessage().Text() << std::endl;
+        appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
@@ -755,9 +756,22 @@ void ImageTool::loadDefaultShapeModel() {
         ReadShapeModel(localPath.constData(), &hv_shapeModel);
         m_shapeModelPath = path;
         std::cout << "已自动加载模板: " << path.toStdString() << std::endl;
-        ui.plnTextEdit_result->appendPlainText("已自动加载模板: " + path);
+        appendLog("已自动加载模板: " + path);
     }
     catch (HalconCpp::HException& e) {
         std::cout << "自动加载模板失败: " << e.ErrorMessage().Text() << std::endl;
+    }
+}
+//新增：工具窗口自己的日志入口
+//  1) 追加到本窗口的结果框（用户能看见）
+//  2) 同时写进全局 Logger（文件 + 主界面日志框）
+void ImageTool::appendLog(const QString& msg, bool isError)
+{
+    ui.plnTextEdit_result->appendPlainText(msg);
+    if (isError) {
+        LOG_ERROR(msg);
+    }
+    else {
+        LOG_INFO(msg);
     }
 }
