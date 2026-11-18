@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ImageParam>
+    <ObjectMatching>
+        <ShapeMatching>
+            <ShapeModelPara>
+                <!--基于形状匹配模板参数-->
+                <NumLevels data="auto"/>
+                <AngleStart data="-0.390000"/>
+                <AngleExtent data="0.790000"/>
+                <AngleStep data="0.012500"/>
+                <Optimization data="none"/>
+                <Metric data="ignore_global_polarity"/>
+                <Contrast data="auto_contrast"/>
+                <MinContrast data="10"/>
+            </ShapeModelPara>
+            <FindShapePara>
+                <!--形状匹配参数-->
+                <AngleStart data="0"/>
+                <AngleExtent data="0"/>
+                <MinScore data="0.500000"/>
+                <NumMatches data="2"/>
+                <MaxOverlap data="0.500000"/>
+                <SubPixel data="least_squares"/>
+                <NumLevels_2 data="auto"/>
+                <Greediness data="0.900000"/>
+            </FindShapePara>
+        </ShapeMatching>
+    </ObjectMatching>
+    <CodeIdentification>
+        <!--码识别相关参数-->
+        <BarCode>
+            <!--条码识别-->
+            <abort data="true"/>
+            <orientation data="0"/>
+            <orientation_tol data="15"/>
+            <min_identical_scanlines data="3"/>
+            <element_size_min data="2"/>
+            <check_char data="false"/>
+            <persistence data="1"/>
+            <stop_after_result_num data="1"/>
+            <num_scanlines data="10"/>
+            <meas_thresh data="0.5"/>
+            <codeType data="auto"/>
+            <barCodeModel data="barCodeModel.bar"/>
+        </BarCode>
+    </CodeIdentification>
+    <system>
+        <!--系统参数-->
+        <!--网络参数-->
+        <server ip="127.0.0.1" port="8888"/>
+        <!--相机参数-->
+        <camNums data="3"/>
+        <camtype name="" SN="123456"/>
+    </system>
+</ImageParam>

@@ -1,0 +1,21 @@
+# 编译产物
+x64/
+Debug/
+Release/
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.exe
+*.dll
+
+# Visual Studio 本机配置
+.vs/
+*.user
+*.suo
+
+# 运行产生的文件
+logs/
+Image_Mat.bmp
+received/
