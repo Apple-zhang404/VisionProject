@@ -7,7 +7,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历_new.docx"
+OUT = r"C:\Users\SPG\Documents\简历\张谦帅_简历_v2.docx"
 
 NAVY = "1F3864"
 GRAY = (0x59, 0x59, 0x59)
@@ -18,14 +18,14 @@ sec = doc.sections[0]
 sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
 sec.left_margin = sec.right_margin = Cm(1.6)
 sec.top_margin = Cm(1.0)
-sec.bottom_margin = Cm(1.0)
+sec.bottom_margin = Cm(0.9)
 
 st = doc.styles["Normal"]
 st.font.name = "Calibri"
 st.font.size = Pt(9.5)
 st.element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
 st.paragraph_format.space_after = Pt(0)
-st.paragraph_format.line_spacing = 1.0
+st.paragraph_format.line_spacing = Pt(12.6)
 
 
 def font(run, size=9.5, bold=False, color=None, spacing=None):
@@ -111,6 +111,7 @@ def tech_line(text):
 # ==================== 顶部标题条 ====================
 p = p_new(before=0, after=0)
 font(p.add_run("个 人 简 历"), 19, True, (0x1F, 0x38, 0x64), spacing=40)
+p.paragraph_format.line_spacing = Pt(27)   # 标题字号大，不能用固定行距，否则被裁
 font(p.add_run("   |  "), 13, False, (0xBF, 0xBF, 0xBF))
 font(p.add_run("Personal Resume"), 10.5, False, GRAY, spacing=10)
 border_para(p, "bottom", NAVY, "18", "2")
@@ -242,7 +243,9 @@ font(p.add_run("说明：以下截图均为离线图片序列模拟四路相机�
 
 def figure(path, caption, width_cm):
     doc.add_picture(path, width=Cm(width_cm))
-    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _p = doc.paragraphs[-1]
+    _p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _p.paragraph_format.line_spacing = 1.0   # 图片段落不能用固定行距，否则图片被裁成一条
     cap = p_new(before=1, after=4)
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     font(cap.add_run(caption), 8.5, False, GRAY)
