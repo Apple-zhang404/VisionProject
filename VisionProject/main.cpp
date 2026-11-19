@@ -2,7 +2,7 @@
 #include <QtWidgets/QApplication>
 #define NOMINMAX              // 防止 windows.h 定义 min/max 宏，跟标准库打架
 #include <Windows.h>
-#include <dwmapi.h>      //新增：让标题栏也变深色
+#include <dwmapi.h>      //让标题栏也变深色
 #pragma comment(lib,"dwmapi.lib")
 #include <cstdio> 
 //用于创建控制台调试
@@ -25,7 +25,7 @@ void createDebugConsole()
 #endif
 }
 
-//新增：界面主题（深色工业风：黑灰底 + 青蓝强调色）
+//界面主题（深色工业风：黑灰底 + 青蓝强调色）
 static const char* kThemeQss = R"QSS(
 QWidget {
     font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI";
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
     createDebugConsole();
     QApplication app(argc, argv);
 
-    //新增：统一用 Fusion 风格 + 自定义样式表，避免系统主题把界面画得花里胡哨
+    //统一用 Fusion 风格 + 自定义样式表，避免系统主题把界面画得花里胡哨
     QApplication::setStyle("Fusion");
     app.setStyleSheet(kThemeQss);
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     
     window.show();
 
-    //新增：Windows 10 1809+ 支持深色标题栏，和主题配套
+    //Windows 10 1809+ 支持深色标题栏，和主题配套
     BOOL bDark = TRUE;
     DwmSetWindowAttribute((HWND)window.winId(), 20 /*DWMWA_USE_IMMERSIVE_DARK_MODE*/, &bDark, sizeof(bDark));
 

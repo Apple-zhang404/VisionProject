@@ -2,12 +2,12 @@
 #include <iostream>
 #include <stdexcept>
 
-//新增：图像目标匹配（先留空，等跟到对应进度再补，老师0130这里也是空的）
+//图像目标匹配（先留空，等跟到对应进度再补，老师0130这里也是空的）
 void ImageProcess::objectMatching(cv::Mat& image)
 {
 }
 
-//新增：一维码识别。把cv::Mat转成Halcon的HObject，再调FindBarCode
+//一维码识别。把cv::Mat转成Halcon的HObject，再调FindBarCode
 BarCodeResData& ImageProcess::barCodeIdentify(cv::Mat& image)
 {
     //每次识别前先清空上一次的结果
@@ -49,7 +49,7 @@ BarCodeResData& ImageProcess::barCodeIdentify(cv::Mat& image)
     return m_barCodeResult;
 }
 
-//新增：从文件读一维码模型
+//从文件读一维码模型
 void ImageProcess::readBarCodeModel(std::string model)
 {
     try
@@ -68,12 +68,12 @@ void ImageProcess::readBarCodeModel(std::string model)
     }
 }
 
-//新增：读形状匹配模型（以后用）
+//读形状匹配模型（以后用）
 void ImageProcess::readObjectMatchingModel()
 {
 }
 
-//新增：cv::Mat 转 Halcon 的 HObject（彩色拆三个通道，灰度直接拷贝）
+//cv::Mat 转 Halcon 的 HObject（彩色拆三个通道，灰度直接拷贝）
 void ImageProcess::matToHobject(cv::Mat& Img, HalconCpp::HObject& hvImg)
 {
     int hgt = Img.rows;
@@ -114,7 +114,7 @@ void ImageProcess::matToHobject(cv::Mat& Img, HalconCpp::HObject& hvImg)
     }
 }
 
-//新增：HObject -> cv::Mat（彩色转成BGR，灰度保持单通道）
+//HObject -> cv::Mat（彩色转成BGR，灰度保持单通道）
 void ImageProcess::hobjectToMat(const HalconCpp::HObject& hoImg, cv::Mat& Img)
 {
     if (!hoImg.IsInitialized()) {

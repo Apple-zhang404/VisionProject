@@ -1,4 +1,4 @@
-﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS   //新增：允许用 inet_addr（老师代码用的是它）
+﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS   //允许用 inet_addr（老师代码用的是它）
 #include "socket_client.h"
 #include<iostream>
 #include<cstring>
@@ -26,7 +26,7 @@ bool SocketClient::createSocketClient()
 	//定义要连接的服务器地址
 	sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(m_nport);   //新增：端口从成员取（默认8888）
+	addr.sin_port = htons(m_nport);   //端口从成员取（默认8888）
 	addr.sin_addr.S_un.S_addr = inet_addr(m_ip.c_str());
 	
 	int ret = connect(clientsocket, (SOCKADDR*)&addr, sizeof(addr));
@@ -38,11 +38,11 @@ bool SocketClient::createSocketClient()
 	}
 	std::cout << "客户端建立链接成功" << std::endl;
 
-	//新增：连上了通知主窗口（主窗口会把账号密码发过去）
+	//连上了通知主窗口（主窗口会把账号密码发过去）
 	if (connectCallBack != nullptr) {
 		connectCallBack(m_pmainwin);
 	}
-	return true;   //新增：原来这里漏了返回值
+	return true;   //原来这里漏了返回值
 }
 
 bool SocketClient::sendData(const char* sendbuf)
@@ -55,7 +55,7 @@ bool SocketClient::sendData(const char* sendbuf)
 	return true;
 }
 
-//新增：收数据。连上 -> 一直recv -> 每收到一条就回调主窗口（将来放进线程里跑）
+//收数据。连上 -> 一直recv -> 每收到一条就回调主窗口（将来放进线程里跑）
 void SocketClient::recvData(void* p)
 {
 	int recv_len;
@@ -90,7 +90,7 @@ void SocketClient::recvData(void* p)
 	}
 }
 
-//新增：心跳，每10秒发一次
+//心跳，每10秒发一次
 //注意：原来直接 Sleep(10000)，程序退出时 join 要等满10秒。
 //      改成每 200ms 醒一次看退出标志，退出就立刻返回
 void SocketClient::keepAlive(void* p)

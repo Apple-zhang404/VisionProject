@@ -1,10 +1,10 @@
-
+﻿
 
 #pragma once
 
 #include"Camera.h"
 #include<opencv2/opencv.hpp>
-#include"MvCameraControl.h"   //新增：海康相机SDK
+#include"MvCameraControl.h"   //海康相机SDK
 
 //这里不能写 using namespace cv; 否则 cv::ACCESS_MASK 会和 Windows.h 里的 ACCESS_MASK 冲突
 
@@ -39,9 +39,9 @@ public:
      * 返回值：是否停止成功
      */
     virtual bool stopCap() {
-        return stopCapture();   //新增：统一走 stopCapture
+        return stopCapture();   //统一走 stopCapture
     }
-    //新增：连续采集的启停由相机自己管，调用方不直接碰 m_bstopSnap
+    //连续采集的启停由相机自己管，调用方不直接碰 m_bstopSnap
     bool startCapture() {
         m_bstopSnap = false;    //开始前清标志，避免上一次停止留下的 true
         return true;
@@ -57,9 +57,9 @@ public:
         return m_bcamopen;
     }
 public:
-    //新增：枚举相机（静态，一次就够了），返回设备个数
+    //枚举相机（静态，一次就够了），返回设备个数
     static int getEnumDevices();
-    //新增：按序号给这一路相机创建句柄
+    //按序号给这一路相机创建句柄
     void* createHandle(int nIndex);
 
     //获取图像信息
@@ -82,9 +82,9 @@ public:
         m_pmainWin = pmainWin;
     }
 private:
-    //新增：把SDK的RGB数据转成OpenCV的BGR
+    //把SDK的RGB数据转成OpenCV的BGR
     void RGB2BGR(unsigned char* pRgbData, unsigned int nWidth, unsigned int nHeight);
-    //新增：把SDK的一帧数据转成cv::Mat
+    //把SDK的一帧数据转成cv::Mat
     bool Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char* pData);
 private:
     bool m_bcamopen = false;//相机是否打开，true打开
@@ -92,12 +92,12 @@ private:
     cv::Mat m_imgData;//存放采集后的图片数据
     cv::String m_imageFilePath;//离线采集图片的文件路径
     bool m_bstopSnap = false;//停止连续采集标志
-    int m_nImgIndex = 1;     //新增：离线图片序号（改成成员，4路相机各数各的）
+    int m_nImgIndex = 1;     //离线图片序号（改成成员，4路相机各数各的）
 
     callback_pushImg m_callback_pushImg = nullptr;
     VisionProject* m_pmainWin = nullptr;
 
-    //新增：SDK相关
+    //SDK相关
     void* handle = nullptr;                              //相机句柄
     MV_CC_DEVICE_INFO* pCamInfo = nullptr;               //设备信息
     static MV_CC_DEVICE_INFO_LIST stDeviceList;          //枚举出来的设备列表

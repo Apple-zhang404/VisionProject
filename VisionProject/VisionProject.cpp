@@ -1,13 +1,13 @@
 ﻿#include "VisionProject.h"
 #include <QMessageBox>
 #include <QFileDialog>
-#include <QFileInfo>      //新增：判断文件是否存在
+#include <QFileInfo>      //判断文件是否存在
 #include <QDir>
 #include"ImageTool.h"
-#include"json.hpp"                 //新增：JSON库（单头文件）
-#include"Logger.h"                 //新增：日志模块
-#include"Task.h"                   //新增：Base64编解码
-using json = nlohmann::json;       //新增：给个短名字
+#include"json.hpp"                 //JSON库（单头文件）
+#include"Logger.h"                 //日志模块
+#include"Task.h"                   //Base64编解码
+using json = nlohmann::json;       //给个短名字
 
 
 VisionProject::VisionProject(QWidget *parent)
@@ -17,9 +17,9 @@ VisionProject::VisionProject(QWidget *parent)
     if (m_doc->load()) {
         m_doc->ReadFindShapeAllParams();
         m_doc->ReadShapeModelParams();
-        m_doc->ReadXMLCodeNodeParams("BarCode");//新增：读一维码那组参数
+        m_doc->ReadXMLCodeNodeParams("BarCode");//读一维码那组参数
     }
-    //新增：按XML里的配置加载一维码模型、设置条码参数（老师0130的做法）
+    //按XML里的配置加载一维码模型、设置条码参数（老师0130的做法）
     {
         std::string barcodeModel = m_doc->GetNodeParam("barCodeModel");
         sBCIParam param;
@@ -28,7 +28,7 @@ VisionProject::VisionProject(QWidget *parent)
         m_imgProcess.setBarCodeParam(param);
         LOG_INFO(QString("条码模型已加载: %1").arg(QString::fromLocal8Bit(barcodeModel.c_str())));
     }
-    //新增：socket初始化（这一步只注册，不连服务器；线程下一步再加）
+    //socket初始化（这一步只注册，不连服务器；线程下一步再加）
     m_socket.setMainWinPtr(this);
     m_socket.setSocketPara("127.0.0.1", 8888);
     m_socket.registerConnCallbackFunc(connectServerCallbackFunc);   //连接成功后发账号
@@ -40,7 +40,7 @@ VisionProject::VisionProject(QWidget *parent)
     //下一步再加这两个线程：
     
     //实例化4个相机并注册到设备管理对象中
-    //新增：先枚举一次相机，再给每一路建句柄（没有相机时跳过，离线模式照常能用）
+    //先枚举一次相机，再给每一路建句柄（没有相机时跳过，离线模式照常能用）
     int nDevNum = HK_Camera::getEnumDevices();
     LOG_INFO(QString("枚举到相机数量: %1").arg(nDevNum));
     for (int i = 0; i < 4; i++) {
@@ -53,14 +53,14 @@ VisionProject::VisionProject(QWidget *parent)
 
     ui.setupUi(this);
 
-    //新增：日志接到界面右侧的日志框（信号跨线程排队，子线程写日志也安全）
+    //日志接到界面右侧的日志框（信号跨线程排队，子线程写日志也安全）
     connect(&Logger::instance(), &Logger::newLog, this,
         [this](const QString& line) {
             ui.plainTextEdit->appendPlainText(line);
         }, Qt::QueuedConnection);
     LOG_INFO("程序启动");
 
-    //新增：界面布局调整——画面区占大头，日志区窄一些，窗口默认大一点
+    //界面布局调整——画面区占大头，日志区窄一些，窗口默认大一点
     resize(1280, 800);
     ui.label->setMinimumSize(300, 220);
     ui.label_2->setMinimumSize(300, 220);
@@ -71,13 +71,13 @@ VisionProject::VisionProject(QWidget *parent)
         sizes << 900 << 300;
         ui.splitter_2->setSizes(sizes);   //左边画面 : 右边日志 = 3 : 1
     }
-    //新增：给4个画面加一个浅色边框，看着不那么空
+    //给4个画面加一个浅色边框，看着不那么空
     const char* imgFrameStyle = "border: 1px solid #3a4552; border-radius: 6px; background: #0a0c0e;";
     ui.label->setStyleSheet(imgFrameStyle);
     ui.label_2->setStyleSheet(imgFrameStyle);
     ui.label_3->setStyleSheet(imgFrameStyle);
     ui.label_4->setStyleSheet(imgFrameStyle);
-    statusBar()->showMessage("就绪");   //新增：状态栏提示
+    statusBar()->showMessage("就绪");   //状态栏提示
 
     //用代码初始化动作
     QAction* actOpenCam = new QAction(QString("打开相机"), this);
@@ -110,7 +110,7 @@ VisionProject::VisionProject(QWidget *parent)
     m_lineEdit->setMaximumWidth(300); //控件宽
     ui.mainToolBar->addWidget(m_lineEdit);//添加到工具蓝
 
-    QPushButton* pbt = new QPushButton("浏览", this);//读文件地址的按钮（新增：原来只显示"..."太窄）
+    QPushButton* pbt = new QPushButton("浏览", this);//读文件地址的按钮（原来只显示"..."太窄）
     connect(pbt, &QPushButton::clicked, this, &VisionProject::on_pbtnOpenDir);//把这个按钮的点击信号量与on_pbtnOpenDir这个函数绑定，点击之后就调用这个函数
     ui.mainToolBar->addWidget(pbt);
 
@@ -146,7 +146,7 @@ VisionProject::VisionProject(QWidget *parent)
         phk_cam[i]->setOffLineFlags(false);  //初始化为非离线模式
     }
 
-    //新增：4个相机各自注册自己那一路的回调函数，采集到的图直接显示到对应的label上
+    //4个相机各自注册自己那一路的回调函数，采集到的图直接显示到对应的label上
     phk_cam[0]->setGrapImageCallbackFunc(grapImageCallbackFunc1, this);
     phk_cam[1]->setGrapImageCallbackFunc(grapImageCallbackFunc2, this);
     phk_cam[2]->setGrapImageCallbackFunc(grapImageCallbackFunc3, this);
@@ -159,10 +159,10 @@ VisionProject::VisionProject(QWidget *parent)
 
 VisionProject::~VisionProject()
 {
-    //新增：退出顺序很重要——先让每个线程"知道该退了"，再 join 等它真的退出
+    //退出顺序很重要——先让每个线程"知道该退了"，再 join 等它真的退出
     //1) 显示线程
     m_bDispFinish = true;
-    m_cvDisp.notify_all();   //新增：叫醒还在等帧的线程，让它看到退出标志
+    m_cvDisp.notify_all();   //叫醒还在等帧的线程，让它看到退出标志
     if (tDisp != nullptr && tDisp->joinable()) {
         tDisp->join();
     }
@@ -219,7 +219,7 @@ void VisionProject::on_actCloseCam()
 void VisionProject::on_actSnapGrap()
 {
     int index = m_cmb->currentIndex();
-    //新增：已经在采集了就不要再开线程（防止连点开出一堆线程）
+    //已经在采集了就不要再开线程（防止连点开出一堆线程）
     if (m_bStartSnapCrap) {
         QMessageBox::information(this, "提示", "连续采集正在进行，请先点[停止采集]");
         return;
@@ -229,15 +229,15 @@ void VisionProject::on_actSnapGrap()
             QMessageBox::information(this, "提示", "请查看采集路径是否正确！");
             return;
         }
-        //新增：按界面上的勾选设置离线/在线，避免忘了勾离线导致采集失败
+        //按界面上的勾选设置离线/在线，避免忘了勾离线导致采集失败
         phk_cam[index]->setOffLineFlags(m_chk_Off->isChecked());
         phk_cam[index]->setOffLineGrapImgPath(m_lineEdit->text().toLocal8Bit().toStdString());//把路径设置给相机
 
-        phk_cam[index]->startCapture();//新增：由相机清停止标志，调用方不直接改
+        phk_cam[index]->startCapture();//由相机清停止标志，调用方不直接改
         m_bStartSnapCrap = true;
-        if (m_actSnapGrap) m_actSnapGrap->setEnabled(false);//新增：开始采集后按钮置灰
+        if (m_actSnapGrap) m_actSnapGrap->setEnabled(false);//开始采集后按钮置灰
 
-        //新增：采集线程存成成员，不再 detach；退出时由析构/停止逻辑 join 回收
+        //采集线程存成成员，不再 detach；退出时由析构/停止逻辑 join 回收
         if (m_thdSnap != nullptr && m_thdSnap->joinable()) {//上一路的线程还没回收，先收掉
             m_thdSnap->join();
             delete m_thdSnap;
@@ -261,10 +261,10 @@ void VisionProject::on_actStopCaptrue()
 {
     int index = m_cmb->currentIndex();
     if (phk_cam[index]->isOpen()) {
-        stopSnap();//新增：置标志位并通知相机停止采集
+        stopSnap();//置标志位并通知相机停止采集
         m_bStartSnapCrap = false;
-        if (m_actSnapGrap) m_actSnapGrap->setEnabled(true);//新增：停止后按钮恢复可点
-        //新增：等采集线程真正退出再回收，避免它还在跑就析构
+        if (m_actSnapGrap) m_actSnapGrap->setEnabled(true);//停止后按钮恢复可点
+        //等采集线程真正退出再回收，避免它还在跑就析构
         if (m_thdSnap != nullptr && m_thdSnap->joinable()) {
             m_thdSnap->join();
             delete m_thdSnap;
@@ -307,7 +307,7 @@ void VisionProject::on_chxBoxOffLine(Qt::CheckState state)
 void VisionProject::on_actGetFrame() {
     int i = m_cmb->currentIndex();
     if (phk_cam[i]->isOpen()) {
-        //新增：按界面上的勾选设置离线/在线（老师把这行注释掉了，导致没勾离线时单帧采集必然失败）
+        //按界面上的勾选设置离线/在线（老师把这行注释掉了，导致没勾离线时单帧采集必然失败）
         phk_cam[i]->setOffLineFlags(m_chk_Off->isChecked());
         if (m_lineEdit->text().isEmpty()) {//看文件路径上是否有路径
             QMessageBox::information(this, "提示", "请查看采集路径是否正确！");//如没有
@@ -329,7 +329,7 @@ void VisionProject::on_actGetFrame() {
 
 }
 
-//新增：工作线程——从队列取帧、识别条码、把图交给主线程显示
+//工作线程——从队列取帧、识别条码、把图交给主线程显示
 //  要点：
 //  1) 用条件变量等待，没有帧就睡，不空转烧CPU
 //  2) 4 路队列轮流看，每路单独去重
@@ -399,7 +399,7 @@ void VisionProject::displayThdFunc(void* para)
     }
 }
 
-//新增：把一帧放进队列。容量只有1：新帧直接覆盖旧帧，保证不会积压
+//把一帧放进队列。容量只有1：新帧直接覆盖旧帧，保证不会积压
 void VisionProject::pushFrame(int cam, cv::Mat img)
 {
     if (cam < 0 || cam >= 4 || img.empty()) {
@@ -415,7 +415,7 @@ void VisionProject::pushFrame(int cam, cv::Mat img)
     }
     m_cvDisp.notify_one();   //叫醒工作线程
 }
-//新增：把图像投递到主线程显示。子线程（采集/显示线程）不能直接 setPixmap，
+//把图像投递到主线程显示。子线程（采集/显示线程）不能直接 setPixmap，
 //      否则就是"跨线程操作UI"，轻则闪烁重则崩溃
 void VisionProject::postShowImage(VisionProject* p, cv::Mat img, int cam) {
     if (p == nullptr || img.empty() || cam < 0 || cam >= 4) {
@@ -462,11 +462,11 @@ void VisionProject::on_pbtn_imageTool_clicked()
 {
     ImageTool *imgTool=new ImageTool();
     imgTool->setOfflineFlages(m_chk_Off->isChecked());//是否被勾选离线模式
-    imgTool->setMainWinPtr(this);//新增：把主窗口给它，用来读写XML参数
-    imgTool->setAttribute(Qt::WA_DeleteOnClose);//新增：关窗口就销毁，析构里才会把参数存回XML
+    imgTool->setMainWinPtr(this);//把主窗口给它，用来读写XML参数
+    imgTool->setAttribute(Qt::WA_DeleteOnClose);//关窗口就销毁，析构里才会把参数存回XML
     //目录选了就顺便带一张图过去；没选也没关系，打开后可以在缩略图列表里自己选图
     if (!m_lineEdit->text().isEmpty()) {
-        //新增：不能写死 color.png（目录里是 picture_1.png），按顺序找一个真实存在的文件
+        //不能写死 color.png（目录里是 picture_1.png），按顺序找一个真实存在的文件
         QDir dir(m_lineEdit->text());
         QString imgPath;
         QStringList names; names << "picture_1.png" << "color.png";
@@ -488,7 +488,7 @@ void VisionProject::on_pbtn_imageTool_clicked()
     }
     imgTool->show();
 }
-//=================== 新增：socket的三个回调 ===================
+//=================== socket的三个回调 ===================
 
 //连接成功后：把账号密码发给服务器（JSON格式）
 void VisionProject::connectServerCallbackFunc(void* p)
@@ -564,7 +564,7 @@ void VisionProject::keepAliveCallbackFunc(void* p)
         std::cout << "JSON异常: " << strExceInfo << std::endl;
     }
 }
-//=================== 新增：图像与Base64互转（传图用） ===================
+//=================== 图像与Base64互转（传图用） ===================
 
 //把一张Mat压成JPG，再编码成Base64字符串（可以直接塞进JSON）
 std::string VisionProject::Mat2Base64_JPEG(const cv::Mat& img)

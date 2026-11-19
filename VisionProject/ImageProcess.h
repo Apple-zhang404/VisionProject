@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <opencv2/opencv.hpp>
 #include "HalconCpp.h"
 #include <QString>
@@ -38,7 +38,7 @@ typedef struct st_BarCodeResultData {
     HalconCpp::HTuple hv_DecodedDataStrings;
 }BarCodeResData;
 
-//新增：算法层。界面只负责调这里，不再直接写Halcon算子
+//算法层。界面只负责调这里，不再直接写Halcon算子
 class ImageProcess
 {
 private:
@@ -67,7 +67,7 @@ public:
         return hv_barCodeMod;
     }
 public:
-    //新增：Mat 和 HObject 互转（旋转这类OpenCV擅长的事要用到）
+    //Mat 和 HObject 互转（旋转这类OpenCV擅长的事要用到）
     void matToHobject(cv::Mat& Img, HalconCpp::HObject& hvImg);        //Mat -> HObject
     void hobjectToMat(const HalconCpp::HObject& hoImg, cv::Mat& Img);  //HObject -> Mat
 private:

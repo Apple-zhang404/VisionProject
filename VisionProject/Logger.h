@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QString>
 #include <QMutex>
 #include <QFile>
 
-//新增：日志模块
+//日志模块
 //  1) 带时间戳和级别
 //  2) 同时写文件（logs/yyyy-MM-dd.log），关程序也留着
 //  3) 用信号把日志送回主线程显示，避免子线程直接碰界面

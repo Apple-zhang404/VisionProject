@@ -5,25 +5,25 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include "VisionProject.h"//为了拿到主窗口的XML配置对象
-#include "Logger.h"       //新增：统一日志
+#include "Logger.h"       //统一日志
 
 ImageTool::ImageTool(QWidget* parent)
     : QWidget(parent)
 {
     ui.setupUi(this);
-    resize(1200, 780);   //新增：默认窗口开大一点，参数区不至于挤成一列
-    initParamDefault();//新增：给形状匹配的参数控件填默认值
-    loadDefaultShapeModel();//新增：自动加载exe目录下的模板，免得每次都要手动点"加载模板"
+    resize(1200, 780);   //默认窗口开大一点，参数区不至于挤成一列
+    initParamDefault();//给形状匹配的参数控件填默认值
+    loadDefaultShapeModel();//自动加载exe目录下的模板，免得每次都要手动点"加载模板"
 }
 
 ImageTool::~ImageTool()
 {
     //关闭窗口时，把界面上的参数写回XML
-    updateBarCodeUIToXML();     //新增：条码参数先写进XML文档
+    updateBarCodeUIToXML();     //条码参数先写进XML文档
     updateUIParamToXMLPara();   //再写模板/匹配参数，并在末尾统一存盘
 }
 void ImageTool::on_pbtn_getframe_clicked() {
-    //新增：这个窗口本来就是拿本地图片做算法验证的，所以不管主界面勾没勾离线，
+    //这个窗口本来就是拿本地图片做算法验证的，所以不管主界面勾没勾离线，
     //      只要没有路径就弹框让用户选一张，选完直接读出来显示
     //      （原来非离线模式下点这个按钮一点反应都没有）
     {
@@ -40,7 +40,7 @@ void ImageTool::on_pbtn_getframe_clicked() {
             std::cout << "准备读取: [" << QString::fromLocal8Bit(m_filenpath.c_str()).toStdString() << "]" << std::endl;
             ReadImage(&ho_image, m_filenpath.c_str());
             winId_Image = ui.lab_matching->winId();//获取label的窗口id
-            if (hv_window.Length() == 0) {//新增：窗口只建一次，避免每次点都新建
+            if (hv_window.Length() == 0) {//窗口只建一次，避免每次点都新建
                 SetWindowAttr("background_color", "black");//设置下一个窗口的属性，必须在OpenWindow之前
                 OpenWindow(0, 0, ui.lab_matching->width(),
                     ui.lab_matching->height(), winId_Image, "visible", "", &hv_window);
@@ -50,7 +50,7 @@ void ImageTool::on_pbtn_getframe_clicked() {
             }
             SetLineWidth(hv_window, 3);//设置划线的宽度为三
             ClearWindow(hv_window);
-            dispImageFit();//新增：自适应显示
+            dispImageFit();//自适应显示
         }
         catch (HalconCpp::HException& e) {
             //Halcon出错是抛异常，不接住的话程序会直接崩掉
@@ -59,7 +59,7 @@ void ImageTool::on_pbtn_getframe_clicked() {
     }
 }
 
-//新增：点"选择图片"按钮，一次可以选多张图
+//点"选择图片"按钮，一次可以选多张图
 void ImageTool::on_pbtn_openImage_clicked() {
     QStringList files = QFileDialog::getOpenFileNames(this, "选择图片", ".",
         "图片(*.png *.jpg *.jpeg *.bmp)");
@@ -70,7 +70,7 @@ void ImageTool::on_pbtn_openImage_clicked() {
     updateListImage();//把选中的图都做成缩略图
 }
 
-//新增：把 m_imagePaths 里的图片都做成缩略图，横着排在 listWidget 里
+//把 m_imagePaths 里的图片都做成缩略图，横着排在 listWidget 里
 void ImageTool::updateListImage() {
     ui.listWidget->clear();
     ui.listWidget->setViewMode(QListView::IconMode);//图标模式，横向排列
@@ -88,7 +88,7 @@ void ImageTool::updateListImage() {
     }
 }
 
-//新增：点中某张缩略图，就把它显示出来
+//点中某张缩略图，就把它显示出来
 void ImageTool::on_listWidget_itemClicked(QListWidgetItem* item) {
     if (!item) {
         return;
@@ -100,13 +100,13 @@ void ImageTool::on_listWidget_itemClicked(QListWidgetItem* item) {
     displayImage(m_imagePaths.at(index));
 }
 
-//新增：读一张图，显示到label上（halcon窗口只创建一次，之后只改大小）
+//读一张图，显示到label上（halcon窗口只创建一次，之后只改大小）
 void ImageTool::displayImage(const QString& file) {
     try {
         std::cout << "选中图片: [" << file.toStdString() << "]" << std::endl;
         //Qt6 的 toStdString 是 UTF-8，Halcon 要本地编码(GBK)，中文路径必须用 toLocal8Bit
         QByteArray localPath = file.toLocal8Bit();
-        m_filenpath = localPath.toStdString();   //新增：记住当前选中的图，采集单帧按钮就用它
+        m_filenpath = localPath.toStdString();   //记住当前选中的图，采集单帧按钮就用它
         ReadImage(&ho_image, localPath.constData());
 
         winId_Image = ui.lab_matching->winId();//获取label的窗口id
@@ -120,14 +120,14 @@ void ImageTool::displayImage(const QString& file) {
         }
         SetLineWidth(hv_window, 3);
         ClearWindow(hv_window);
-        dispImageFit();//新增：按窗口比例显示整幅图（原来是1:1，大图会被裁掉）
+        dispImageFit();//按窗口比例显示整幅图（原来是1:1，大图会被裁掉）
     }
     catch (HalconCpp::HException& e) {
         appendLog(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())), true);
     }
 }
 
-//新增：把整幅图按比例缩放到 Halcon 窗口里显示（保持长宽比，四周补黑边）
+//把整幅图按比例缩放到 Halcon 窗口里显示（保持长宽比，四周补黑边）
 void ImageTool::dispImageFit() {
     if (!ho_image.IsInitialized() || hv_window.Length() == 0) {
         return;
@@ -155,7 +155,7 @@ void ImageTool::dispImageFit() {
     DispObj(ho_image, hv_window);
 }
 
-//新增：窗口大小变化时重新适配显示
+//窗口大小变化时重新适配显示
 void ImageTool::resizeEvent(QResizeEvent* e) {
     QWidget::resizeEvent(e);
     if (hv_window.Length() == 0 || ui.lab_matching->width() <= 0) {
@@ -172,9 +172,9 @@ void ImageTool::resizeEvent(QResizeEvent* e) {
     }
 }
 
-//=================== 下面都是新增：形状匹配 ===================
+//=================== 下面都是形状匹配 ===================
 
-//新增：选择模板ROI —— 在图像上拉一个矩形，把这块区域抠出来当模板
+//选择模板ROI —— 在图像上拉一个矩形，把这块区域抠出来当模板
 void ImageTool::on_pbtn_ROIChoice_clicked() {
     try {
         if (ho_image.IsInitialized() == false) {
@@ -201,7 +201,7 @@ void ImageTool::on_pbtn_ROIChoice_clicked() {
     }
 }
 
-//新增：创建模板 —— 用ROI抠出来的图生成形状模板，并存成 shapeModel1.mod
+//创建模板 —— 用ROI抠出来的图生成形状模板，并存成 shapeModel1.mod
 void ImageTool::on_pbtn_createmodel_clicked() {
     try {
         if (ho_cutGray.IsInitialized() == false) {
@@ -227,7 +227,7 @@ void ImageTool::on_pbtn_createmodel_clicked() {
         CreateShapeModel(ho_cutGray, hv_numlevels, hv_angleStart, hv_angleExtent, hv_angleStep,
             hv_optimization, hv_metric, hv_contrast, hv_minContrast, &hv_shapeModel);
 
-        //新增：让用户自己选保存位置和文件名，这样可以存多个模板，不用互相覆盖
+        //让用户自己选保存位置和文件名，这样可以存多个模板，不用互相覆盖
         QString savePath = QFileDialog::getSaveFileName(this, "保存模板",
             QDir::current().filePath("shapeModel1.mod"), "模板文件(*.mod)");
         if (savePath.isEmpty()) {
@@ -245,7 +245,7 @@ void ImageTool::on_pbtn_createmodel_clicked() {
     }
 }
 
-//新增：预览模板 —— 看看模板分了几层、哪些边缘被用上了
+//预览模板 —— 看看模板分了几层、哪些边缘被用上了
 void ImageTool::on_pbtn_inspectshape_clicked() {
     try {
         if (ho_cutGray.IsInitialized() == false) {
@@ -262,7 +262,7 @@ void ImageTool::on_pbtn_inspectshape_clicked() {
     }
 }
 
-//新增：加载模板 —— 从 .mod 文件读一个已经做好的模板
+//加载模板 —— 从 .mod 文件读一个已经做好的模板
 void ImageTool::on_pbtn_loadmodel_clicked() {
     try {
         hv_shapeModel.Clear();//读之前先清空
@@ -286,7 +286,7 @@ void ImageTool::on_pbtn_loadmodel_clicked() {
     }
 }
 
-//新增：目标匹配 —— 在当前图里找模板，画出位置并把分数打出来
+//目标匹配 —— 在当前图里找模板，画出位置并把分数打出来
 void ImageTool::on_pbtn_matching_clicked() {
     try {
         if (hv_shapeModel.Length() == 0) {
@@ -346,7 +346,7 @@ void ImageTool::on_pbtn_matching_clicked() {
     }
 }
 
-//新增：给形状匹配的参数控件填默认值（HALCON 常用默认，角度单位是弧度）
+//给形状匹配的参数控件填默认值（HALCON 常用默认，角度单位是弧度）
 void ImageTool::initParamDefault() {
     //---------------- 模板参数 ShapeModelPara ----------------
     //NumLevels：auto 或者 1~8 的层数
@@ -425,7 +425,7 @@ void ImageTool::initParamDefault() {
     ui.dspin_greediness->setValue(0.9);
 }
 
-//新增：从XML读参数，填到界面控件上（打开窗口时调用）
+//从XML读参数，填到界面控件上（打开窗口时调用）
 void ImageTool::updateXMLParaToUIParam() {
     if (m_mainwin == nullptr || m_mainwin->getXMLPtr() == nullptr) {
         return;
@@ -480,7 +480,7 @@ void ImageTool::updateXMLParaToUIParam() {
     if (!v.empty()) { ui.dspin_greediness->setValue(atof(v.c_str())); }
 }
 
-//新增：把界面上的参数写回XML并保存（关闭窗口时调用）
+//把界面上的参数写回XML并保存（关闭窗口时调用）
 void ImageTool::updateUIParamToXMLPara() {
     if (m_mainwin == nullptr || m_mainwin->getXMLPtr() == nullptr) {
         return;
@@ -509,9 +509,9 @@ void ImageTool::updateUIParamToXMLPara() {
         std::cout << "XML保存失败" << std::endl;
     }
 }
-//=================== 新增：条码识别页 ===================
+//=================== 条码识别页 ===================
 
-//新增：创建条码模型，按界面的勾选项设参数，然后写到 barCodeModel.bar
+//创建条码模型，按界面的勾选项设参数，然后写到 barCodeModel.bar
 void ImageTool::on_pbtn_createbarcode_clicked() {
     try {
         CreateBarCodeModel(HTuple(), HTuple(), &hv_barCodeModel);
@@ -557,7 +557,7 @@ void ImageTool::on_pbtn_createbarcode_clicked() {
     }
 }
 
-//新增：在当前图像上找条码，框出来并打印内容
+//在当前图像上找条码，框出来并打印内容
 void ImageTool::on_pbtn_findbarcode_clicked() {
     try {
         if (!ho_image.IsInitialized()) {
@@ -576,7 +576,7 @@ void ImageTool::on_pbtn_findbarcode_clicked() {
 
         FindBarCode(ho_search, &ho_symbolRegions, hv_barCodeModel, hv_codeType, &hv_decodedDataStrings);
 
-        //新增：原图读不出来时，用OpenCV把图旋转 90/180/270 各试一次（竖着贴的条码也能读）
+        //原图读不出来时，用OpenCV把图旋转 90/180/270 各试一次（竖着贴的条码也能读）
         //注意：不能用Halcon的RotateImage，它保持原尺寸会把图裁掉，转完更读不出来
         int usedRotate = 0;
         if (hv_decodedDataStrings.Length() == 0 && m_mainwin != nullptr) {
@@ -620,7 +620,7 @@ void ImageTool::on_pbtn_findbarcode_clicked() {
         SetColor(hv_window_bar, "blue");
         DispObj(ho_symbolRegions, hv_window_bar);
 
-        //新增：结果写到条码页的文本框里
+        //结果写到条码页的文本框里
         QString strResult;
         strResult += QString("识别到 %1 个条码").arg((int)hv_decodedDataStrings.Length());
         if (usedRotate != 0) {
@@ -641,7 +641,7 @@ void ImageTool::on_pbtn_findbarcode_clicked() {
         ui.plnTextEdit_barcode->setPlainText(QString("HALCON错误: %1").arg(QString::fromLocal8Bit(e.ErrorMessage().Text())));
     }
 }
-//新增：从文件加载条码模型
+//从文件加载条码模型
 void ImageTool::on_pbtn_LoadBarCodeMod_clicked() {
     try {
         hv_barCodeModel.Clear();
@@ -666,7 +666,7 @@ void ImageTool::on_pbtn_LoadBarCodeMod_clicked() {
     }
 }
 
-//新增：XML里的 BarCode 参数 → 界面控件
+//XML里的 BarCode 参数 → 界面控件
 void ImageTool::updateBarCodeXMLToUI() {
     if (m_mainwin == nullptr || m_mainwin->getXMLPtr() == nullptr) {
         return;
@@ -720,7 +720,7 @@ void ImageTool::updateBarCodeXMLToUI() {
     if (!v.empty()) { ui.cmb_codetype->setCurrentText(QString::fromStdString(v)); }
 }
 
-//新增：界面的条码参数 → XML（只改内存里的文档，存盘交给调用者）
+//界面的条码参数 → XML（只改内存里的文档，存盘交给调用者）
 void ImageTool::updateBarCodeUIToXML() {
     if (m_mainwin == nullptr || m_mainwin->getXMLPtr() == nullptr) {
         return;
@@ -739,7 +739,7 @@ void ImageTool::updateBarCodeUIToXML() {
     doc->UpdateXMLCodeNodeValue("BarCode", "meas_thresh", ui.edit_measthresh->text().toStdString());
     doc->UpdateXMLCodeNodeValue("BarCode", "codeType", ui.cmb_codetype->currentText().toStdString());
 }
-//新增：启动时自动加载模板。优先用上次记住的路径，没有就用exe目录下的 shapeModel1.mod
+//启动时自动加载模板。优先用上次记住的路径，没有就用exe目录下的 shapeModel1.mod
 void ImageTool::loadDefaultShapeModel() {
     QString path = m_shapeModelPath;
     if (path.isEmpty()) {
@@ -762,7 +762,7 @@ void ImageTool::loadDefaultShapeModel() {
         std::cout << "自动加载模板失败: " << e.ErrorMessage().Text() << std::endl;
     }
 }
-//新增：工具窗口自己的日志入口
+//工具窗口自己的日志入口
 //  1) 追加到本窗口的结果框（用户能看见）
 //  2) 同时写进全局 Logger（文件 + 主界面日志框）
 void ImageTool::appendLog(const QString& msg, bool isError)

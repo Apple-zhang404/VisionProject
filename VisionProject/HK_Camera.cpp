@@ -1,11 +1,11 @@
 ﻿#include "HK_Camera.h"
 #include <iostream>
 #include <cstdio>
-#include <fstream>   //新增：用 ifstream 判断文件是否存在（避免引入 windows.h）
-#include <thread>    //新增：节流用
+#include <fstream>   //用 ifstream 判断文件是否存在（避免引入 windows.h）
+#include <thread>    //节流用
 #include <chrono>
 
-//新增：静态成员定义
+//静态成员定义
 MV_CC_DEVICE_INFO_LIST HK_Camera::stDeviceList = { 0 };
 
 HK_Camera::HK_Camera() {
@@ -13,7 +13,7 @@ HK_Camera::HK_Camera() {
 
 HK_Camera::~HK_Camera()
 {
-	//新增：析构时销毁句柄，避免泄漏
+	//析构时销毁句柄，避免泄漏
 	if (handle != nullptr) {
 		if (m_bcamopen) {
 			MV_CC_CloseDevice(handle);
@@ -23,7 +23,7 @@ HK_Camera::~HK_Camera()
 	}
 }
 
-//新增：枚举相机（GigE + USB），结果存在 stDeviceList 里
+//枚举相机（GigE + USB），结果存在 stDeviceList 里
 int HK_Camera::getEnumDevices()
 {
 	memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
@@ -36,7 +36,7 @@ int HK_Camera::getEnumDevices()
 	return (int)stDeviceList.nDeviceNum;
 }
 
-//新增：按序号创建句柄（nIndex 从 0 开始）
+//按序号创建句柄（nIndex 从 0 开始）
 void* HK_Camera::createHandle(int nIndex)
 {
 	if (stDeviceList.nDeviceNum <= 0) {
@@ -111,7 +111,7 @@ bool HK_Camera::getFrame()
 		}
 		char filename[512];
 		snprintf(filename, sizeof(filename), "%s/picture_%d.png", m_imageFilePath.c_str(), m_nImgIndex);//拼出完整文件名，注意带扩展名
-		{//新增：先判断文件在不在，报错更好懂
+		{//先判断文件在不在，报错更好懂
 			std::ifstream probe(filename);
 			if (!probe.good()) {
 				std::cout << "找不到离线图片: " << filename
@@ -127,7 +127,7 @@ bool HK_Camera::getFrame()
 		m_nImgIndex++;
 		if (m_nImgIndex > 7) m_nImgIndex = 1;
 	}
-	else {//新增：在线采集，从相机取一帧
+	else {//在线采集，从相机取一帧
 		if (handle == nullptr) {
 			return false;
 		}
@@ -177,7 +177,7 @@ bool HK_Camera::sanpcap()
 			}
 		}
 	}
-	else {//新增：在线连续采集，一直取帧然后回调入队
+	else {//在线连续采集，一直取帧然后回调入队
 		if (handle == nullptr) {
 			return false;
 		}
@@ -197,7 +197,7 @@ bool HK_Camera::sanpcap()
 	return true;
 }
 
-//新增：RGB -> BGR（海康给的是RGB，OpenCV要BGR）
+//RGB -> BGR（海康给的是RGB，OpenCV要BGR）
 void HK_Camera::RGB2BGR(unsigned char* pRgbData, unsigned int nWidth, unsigned int nHeight)
 {
 	int nDataSize = (int)(nWidth * nHeight * 3);
@@ -208,7 +208,7 @@ void HK_Camera::RGB2BGR(unsigned char* pRgbData, unsigned int nWidth, unsigned i
 	}
 }
 
-//新增：把SDK的一帧数据转成 cv::Mat
+//把SDK的一帧数据转成 cv::Mat
 bool HK_Camera::Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char* pData)
 {
 	if (pstImageInfo == nullptr || pData == nullptr) {
